@@ -9,6 +9,7 @@ import random
 import socket
 import zipfile
 import datetime
+import configparser
 from dice_notation.parser import DiceParser
 from math import *
 from bs4 import BeautifulSoup
@@ -31,7 +32,6 @@ changes = '''
 token = ""
 note = ""
 liststr = ""
-BlockAIReason = ""
 apass = ""
 
 aiConvID = 0
@@ -47,6 +47,11 @@ def aNotify(title, text):
 	n = notify2.Notification(title,text,"notification-message-im")
 	n.show()
 	
+def CFGGet(cfgline):
+	config = configparser.ConfigParser()
+	config.readfp(open(r'/home/kaiz0r/PythenaDiscord/config.ini'))
+	return config.get('Athena', cfgline)
+
 #======================
 #Events
 #======================
@@ -99,7 +104,7 @@ async def on_message(message):
 	global bTimerRunning
 	global apass
 	global uptimemins, uptimehours
-	global BlockAIReason
+	
 	#Making sure the bot doesn't respond to itself.
 	if message.author == client.user:
 		return
@@ -343,15 +348,6 @@ async def on_message(message):
 		if note is None:
 			await client.send_message(message.channel, 'Problem there, nothing recorded?')
 	
-	elif message.content.startswith('!block'):
-		if str(message.author) == owner:
-			await client.send_typing(message.channel)
-			msgt = message.content.split(" ")[1:]
-			BlockAIReason = ' '.join(msgt)
-			await client.send_message(message.channel, 'Setting AI Block: '+BlockAIReason)
-		else:
-			await client.send_message(message.channel, 'Access denied.')
-			
 	#Sets various properties.	
 	elif message.content.startswith('!set'):
 		if str(message.author) == owner:
@@ -364,13 +360,6 @@ async def on_message(message):
 				await client.add_reaction(message, "✅")
 				await client.send_message(message.channel, message.author.mention+' Status changed to '+sprop)
 			
-			if svar == 'block':
-				BlockAIReason = sprop
-				await client.add_reaction(message, "✅")
-				if sprop == "":
-					await client.send_message(message.channel, 'Ending AI Block.')
-				else:
-					await client.send_message(message.channel, 'Setting AI Block: '+BlockAIReason)
 		else:
 			await client.send_message(message.channel, message.author.mention+' Access denied.')
 			await client.add_reaction(message, "⛔")
@@ -523,12 +512,12 @@ async def on_message(message):
 #Async Functions
 #======================
 async def queryAI(message, amode):
-	global aiConvID, BlockAIReason
+	global aiConvID
 	
 	await client.send_typing(message.channel)
 	
-	if BlockAIReason != "":
-		await client.send_message(message.channel, 'Chat is currently disabled.\nReason: '+BlockAIReason)
+	if CFGGet("BlockAIReason") != "":
+		await client.send_message(message.channel, 'Chat is currently disabled.\nReason: '+CFGGet("BlockAIReason"))
 		await client.add_reaction(message, "⛔")
 		return
 		
@@ -860,11 +849,6 @@ async def status_task():
 		elif statusvar == 1:
 			now = datetime.datetime.now()
 			await client.change_presence(game=discord.Game(name="Time: "+now.strftime("%H")+":"+now.strftime("%M")+" GMT"))
-		elif statusvar == 2:
-			if BlockAIReason == "":
-				await client.change_presence(game=discord.Game(name="AI ONLINE"))
-			else:
-				await client.change_presence(game=discord.Game(name="AI OFFLINE"))
 			statusvar = -1
 			
 		await asyncio.sleep(60) # task runs every 60 seconds
@@ -877,23 +861,23 @@ async def status_task():
 #======================
 #Script initiation
 #======================
-try:
-	with open('/home/kaiz0r/PythenaDiscord/token.txt', "r") as f:
-		AddLog("Opening token file....")
-		token = f.readline().strip()
-		try:
-			with open('/home/kaiz0r/PythenaDiscord/password1.txt', "r") as f:
-				AddLog("Opening password file....")
-				apass = f.readline().strip()
-				f.close()
-		except:
-			AddLog("Error reading password file...")
+#try:
+	#with open('/home/kaiz0r/PythenaDiscord/token.txt', "r") as f:
+		#AddLog("Opening token file....")
+token = CFGGet("Token") #f.readline().strip()
+		#try:
+		#	with open('/home/kaiz0r/PythenaDiscord/password1.txt', "r") as f:
+			#	AddLog("Opening password file....")
+apass = CFGGet("Password") #f.readline().strip()
+			#	f.close()
+		#except:
+			#AddLog("Error reading password file...")
 			
-		f.close()
-		client.run(token)
+		#f.close()
+client.run(token)
 		
-except:
-	AddLog("Error reading token file...")
+#except:
+#	AddLog("Error reading token file...")
 
 
 #client.run(token)
