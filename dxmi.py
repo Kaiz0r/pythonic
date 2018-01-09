@@ -51,11 +51,11 @@ open_archives()
 if archives > 0:
 	print(str(archives)+" archives extracted.")
 else:
-	print("No archives found, moving on.")
+	print("No archives found.")
 print("Checking files...")
 move_files()
 if files > 0:
 	print(str(files)+" files moved.")
 else:
-	print("No files found. Ending script.")
-input("Press enter to close.")
+	print("No files found.")
+input("Script complete. "+str(files)+" files and "+str(archives)+" archives found. Press enter to close.")

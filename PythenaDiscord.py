@@ -19,19 +19,12 @@ client = discord.Client()
 ChatRoom = discord.Channel
 
 #Constants
-version = "0.110"
+version = "180103"
 changes = '''
-< 0.80 - Added commenting to the script for open-sourcing.
-0.80 - Added Role management.
-0.83 - Added Help command.
-0.85 - Improved !pullfile command
-0.89 - Improved error logging.
-0.90 - Add dynamic reactions
-0.93 - Code refinemenents.
-0.95 - Added password check to server query.
-0.104 - Added DXN search
-0.107 - Added TCA search
-0.110 - Notifications added for host.
+180103 - New version control system/first git push.
+180103.1 - Testing "No players found" response for !ping query
+180103.2 - Finished the !ping update.
+180107 - Testing MS update.
 '''
 
 #Variables
@@ -48,6 +41,7 @@ statusvar = 0
 
 bAlerting = False
 bFoundPlayers = False
+bFoundPlayersQ = False
 
 def aNotify(title, text):
 	n = notify2.Notification(title,text,"notification-message-im")
@@ -456,7 +450,11 @@ async def on_message(message):
 		await client.send_file(message.channel, "/home/kaiz0r/Downloads/.f/stuff-2/Pics & FUN!/Planet Deus Ex/fifth ending.jpg")
 		await client.add_reaction(message, "✅")
 
-			
+	elif message.content.startswith('!giggle'):
+		await client.send_typing(message.channel)
+		await client.send_file(message.channel, "/home/kaiz0r/Downloads/.f/giggle.png")
+		await client.add_reaction(message, "✅")
+				
 	elif message.content.startswith('!files'):
 		reqdirectory = message.content[7:]
 		await client.add_reaction(message, "🔍")
@@ -599,6 +597,7 @@ async def queryAI(message, amode):
 		await client.add_reaction(message, "💬")
 
 async def queryNormalDeusExServer(ip, port, channel):
+	global bFoundPlayersQ
 	try:
 		particularQuery = "\\info\\"
 		sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -614,17 +613,16 @@ async def queryNormalDeusExServer(ip, port, channel):
 		shostx = str(shostname,"latin-1")
 		if(int(playernum) == 1):
 			await client.send_message(channel, "There is "+str(playernum,"latin-1")+" player online on "+str(shostname,"latin-1") )
+			bFoundPlayersQ=True
 		elif(int(playernum) > 1):
 			await client.send_message(channel, "There is "+str(playernum,"latin-1")+" players online on "+str(shostname,"latin-1") )
+			bFoundPlayersQ=True
 		sockUDP.close()
 
 	except:
 		AddLog("This server did not respond our query ::: "+ip+":"+str(port)+" Reason: "+str(sys.exc_info()[0])+" :: "+str(sys.exc_info()[1]))
-	
-	#if bFoundPlayers is False:
-		#await client.send_message(channel, "No players found.")
-	return
 
+	return
 async def queryListDeusExServer(ip, port, qmessage):
 	try:
 		particularQuery = "\\info\\"
@@ -653,11 +651,15 @@ async def queryListDeusExServer(ip, port, qmessage):
 		sockUDP.close()
 			
 	except:
-		AddLog("This server did not respond our query ::: "+ip+":"+str(port)+" Reason: "+str(sys.exc_info()[0])+" :: "+str(sys.exc_info()[1]))
+		AddLog("This server did not respond our query... "+ip+":"+str(port)+" Reason: "+str(sys.exc_info()[0])+" :: "+str(sys.exc_info()[1]))
+		liststr += "\n\n @ "+str(sys.exc_info()[1])+" :: "+ip+":"+str(port)
+		await client.edit_message(qmessage, "```css\n"+liststr+"```")
 		
 	return
 	
 async def msq(channel, bListAll):
+	global bFoundPlayersQ
+	bFoundPlayersQ=False
 	sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	masterServerAddress = ('master.deusexnetwork.com', 28900)
 	masterServerAuth = '\\gamename\\deusex\\location\\0\\validate\\FZcjB4YA\\final\\'
@@ -668,7 +670,7 @@ async def msq(channel, bListAll):
 		liststr = ""
 		mmy = await client.send_message(channel, "===SCANNING===")
 	else:
-		await client.send_message(channel, "Starting uplink...\nIf I don't reply, there was no players online or no response from `"+str(masterServerAddress)+"`")
+		await client.send_message(channel, "Pinging `"+str(masterServerAddress)+"` for players...")
 	AddLog("Connecting to "+str(masterServerAddress)+"...")
 	sockTCP.connect(masterServerAddress)
 	try:
@@ -694,6 +696,8 @@ async def msq(channel, bListAll):
 					await queryListDeusExServer(svr[0],int(svr[1]), mmy)
 				else:
 					await queryNormalDeusExServer(svr[0],int(svr[1]), channel)
+		if bListAll is False and bFoundPlayersQ is False:
+			await client.send_message(channel, "No players found.")
 	finally:
 		sockTCP.close()
 
