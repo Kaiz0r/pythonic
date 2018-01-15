@@ -20,12 +20,15 @@ client = discord.Client()
 ChatRoom = discord.Channel
 
 #Constants
-version = "180103"
+version = "180115.1"
 changes = '''
 180103 - New version control system/first git push.
 180103.1 - Testing "No players found" response for !ping query
 180103.2 - Finished the !ping update.
 180107 - Testing MS update.
+180114 - Added server/player count to the MS query.
+180114.1+ - Formatting edits for MS query.
+180115 - Help request test.
 '''
 
 #Variables
@@ -38,6 +41,8 @@ aiConvID = 0
 uptimemins = 0
 uptimehours = 0
 statusvar = 0
+servercount = 0
+totalplayercount = 0
 
 bAlerting = False
 bFoundPlayers = False
@@ -57,7 +62,7 @@ def CFGGet(cfgline):
 #======================
 @client.event
 async def on_ready():
-	AddLog('Logged in as '+client.user.name+' ('+client.user.id+')')
+	AddLog('Logged in as '+client.user.name+' ('+client.user.id+') - Version: '+version)
 	AddLog('------')
 	notify2.init('Athena')
 	AddLog("Notification daemon started...")
@@ -111,10 +116,15 @@ async def on_message(message):
 	
 	if message.content.startswith('t!') and str(discord.utils.get(message.server.members, name='Tatsumaki').status) == "offline":
 		await client.send_message(message.channel, "Woops, looks like that bot is offline. Try again later.")
+	
+	if message.content.startswith('!help'):
+		await client.send_typing(message.channel)
+		await client.send_message(message.channel, "Need help? Check out <#396821109498183680> for various links, <#402378025590587392> for anything related to the server bots, or <#397441360610983947> if theres something you don't understand.\nIs something broken? Ask around in <#397482321286135829> any someone might be able to help!\nFor anything related to mapping in Unreal, ask in <#396827090407784449> and use the mention **@ mappers**, and for anything related to coding for Unreal, ask in <#396827120879534090> using **@ coders**.\nAnd for anything related to the DXMP Redevelopment project, check in with <#397478972864331786>.")
 		
 	if message.content.startswith('!cmd'):
 		await client.send_message(message.channel, '''
 ```
+!changes > keep track of Athena changes.
 !roles > shows your list of roles.
 !join (players/mappers/coders) > joins one of the set roles.
 !leave (players/mappers/coders) > leaves one of the roles.
@@ -125,14 +135,13 @@ async def on_message(message):
 !ping > quick-check masterserver for online players. If no response, no players.
 !list > prints current deusexnetwork server list.
 !pullfile > starts a query for pulling a file from the host machine. Format: !pullfile <directory> <filename> Certain files are restricted.
-!pull (opendx/rcon/partystuff) > like above, but a shortcut for most used files.
 !search (site) (query) > searches (site) for (query), site can be currently dxn, tca, more engines to come. 
 ```''')
 		await client.add_reaction(message, "🔍")
 	#My personal to-do list regarding coding the bot.
 	elif message.content.startswith('!todo'):
 		await client.send_typing(message.channel)
-		await client.send_message(message.channel, '```css\nBot coding list\n\n[1] Create a GUI for the host.\n[2] <COMPLETE>\n[3] Expand commands.\n[4] Smite Jhonny.\n[5] <COMPLETE>\n[6] <COMPLETE> \n[7] <COMPLETE>\n[8] <COMPLETE>\n[9] <COMPLETE>\n[10] Add a blackjack game?```')
+		await client.send_message(message.channel, '```css\nBot coding list\n\n[1] Nothing planned at the moment.```')
 		await client.add_reaction(message, "🔍")
 	
 	#Shows the users current roles
@@ -586,7 +595,8 @@ async def queryAI(message, amode):
 		await client.add_reaction(message, "💬")
 
 async def queryNormalDeusExServer(ip, port, channel):
-	global bFoundPlayersQ
+	global bFoundPlayersQ, servercount
+	servercount += 1
 	try:
 		particularQuery = "\\info\\"
 		sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -596,7 +606,7 @@ async def queryNormalDeusExServer(ip, port, channel):
 		data = sockUDP.recvfrom(2048) # buffer size is 2048 bytes
 		shostname = data[0].split(b'\\hostname\\')[1].split(b'\\hostport\\')[0]
 		playernum = data[0].split(b'\\maxplayers\\')[0].split(b'\\numplayers\\')[1]
-		AddLog("Received message ::: "+str(data[0],"latin-1"))
+		#AddLog("Received message ::: "+str(data[0],"latin-1"))
 		AddLog("Host name :::"+str(shostname,"latin-1"))
 		AddLog("Players::: "+str(playernum,"latin-1"))
 		shostx = str(shostname,"latin-1")
@@ -609,10 +619,12 @@ async def queryNormalDeusExServer(ip, port, channel):
 		sockUDP.close()
 
 	except:
-		AddLog("This server did not respond our query ::: "+ip+":"+str(port)+" Reason: "+str(sys.exc_info()[0])+" :: "+str(sys.exc_info()[1]))
+		AddLog("This server did not respond our query ::: "+ip+":"+str(port)+" Reason: "+str(sys.exc_info()[1]))
 
 	return
 async def queryListDeusExServer(ip, port, qmessage):
+	global servercount, totalplayercount
+	servercount += 1
 	try:
 		particularQuery = "\\info\\"
 		sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -634,20 +646,23 @@ async def queryListDeusExServer(ip, port, qmessage):
 			lstr = ""
 		global liststr
 		liststr += "\n\n"+lstr+" Host: "+str(shostname,"latin-1")+" ("+str(playernum,"latin-1")+"/"+str(maxplayers,"latin-1")+")  Map: "+str(mapname,"latin-1")+"  Game: "+str(gametype,"latin-1")
-
-		await client.edit_message(qmessage, "```css\n"+liststr+"```")
+		tempstr = str(playernum,"latin-1")
+		totalplayercount += int(tempstr)
+		await client.edit_message(qmessage, "**Server List for Deus Ex**```css\n\n"+liststr+"\n\nServers: "+str(servercount)+"  Total Players: "+str(totalplayercount)+"```")
 
 		sockUDP.close()
 			
 	except:
 		AddLog("This server did not respond our query... "+ip+":"+str(port)+" Reason: "+str(sys.exc_info()[0])+" :: "+str(sys.exc_info()[1]))
-		liststr += "\n\n @ "+str(sys.exc_info()[1])+" :: "+ip+":"+str(port)
-		await client.edit_message(qmessage, "```css\n"+liststr+"```")
+		liststr += "\n\n [ "+str(sys.exc_info()[1])+" :: "+ip+":"+str(port)+" ]"
+		await client.edit_message(qmessage, "**Server List for Deus Ex**```css\n\n"+liststr+"\n\nServers: "+str(servercount)+"  Total Players: "+str(totalplayercount)+"```")
 		
 	return
 	
 async def msq(channel, bListAll):
-	global bFoundPlayersQ
+	global bFoundPlayersQ, servercount, totalplayercount
+	totalplayercount = 0
+	servercount = 0
 	bFoundPlayersQ=False
 	sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	masterServerAddress = ('master.deusexnetwork.com', 28900)
@@ -657,9 +672,9 @@ async def msq(channel, bListAll):
 	if bListAll is True:
 		global liststr
 		liststr = ""
-		mmy = await client.send_message(channel, "===SCANNING===")
+		mmy = await client.send_message(channel, "....")
 	else:
-		await client.send_message(channel, "Pinging `"+str(masterServerAddress)+"` for players...")
+		await client.send_message(channel, "Pinging `"+str(masterServerAddress[0])+":"+str(masterServerAddress[1])+"` for players...")
 	AddLog("Connecting to "+str(masterServerAddress)+"...")
 	sockTCP.connect(masterServerAddress)
 	try:
