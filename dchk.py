@@ -1,9 +1,9 @@
 import os
 import sys
 
-dlpath = '/home/kaiz0r/.wine/drive_c/Deus Ex GOTY/Cache/'
-fileext = ".uxx"
-dchkstr = "bAdmin"
+dlpath = '/home/kaiz0r/.wine/drive_c/Deus Ex GOTY/OpenDX/Classes/'
+fileext = ".uc"
+dchkstr = "setWPActive"
 
 foundnum = 0
 foundstr = ""
